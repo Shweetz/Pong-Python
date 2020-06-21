@@ -96,6 +96,10 @@ paddle = Paddle(HEIGHT//2)
 # Frame rate
 clock = pygame.time.Clock()
 
+sample = open("game.csv", "w")
+
+print("x,y,vx,vy,Paddle.y", file=sample)
+
 # === Game loop
 while True:
     if CHEAT_MODE:
@@ -107,6 +111,8 @@ while True:
     paddle.update()
     # Display everything
     pygame.display.flip()
+
+    print(f"{ball.x},{ball.y},{ball.vx},{ball.vx},{paddle.y}", file=sample)
 
     # === Event queue
     e = pygame.event.poll()
