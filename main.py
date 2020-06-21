@@ -1,5 +1,6 @@
 
 import pygame
+import pandas as pd
 
 # === Variables (w=100, h=100, fr=1 for collision test)
 WIDTH = 1200
@@ -29,11 +30,9 @@ class Ball:
         self.show(self.color)
 
     def show(self, color):
-        global screen
         pygame.draw.circle(screen, color, (self.x, self.y), Ball.RADIUS)
 
     def update(self):
-        # global fgColor, bgColor
         # Hide previous ball position
         self.show(bgColor)
 
@@ -63,17 +62,18 @@ class Paddle:
         self.show(self.color)
 
     def show(self, color):
-        global screen
         rect = pygame.Rect(WIDTH - self.WIDTH, self.y - self.HEIGHT//2, self.WIDTH, self.HEIGHT)
         pygame.draw.rect(screen, color, rect)
 
-    def update(self):
+    def update(self, newY):
+        # newY = pygame.mouse.get_pos()[1]
+
         self.show(bgColor)
-        self.y = pygame.mouse.get_pos()[1]
-        if self.y < BORDER + Paddle.HEIGHT//2:
-            self.y = BORDER + Paddle.HEIGHT//2
-        if self.y > HEIGHT - BORDER - Paddle.HEIGHT//2:
-            self.y = HEIGHT - BORDER - Paddle.HEIGHT//2
+        self.y = int(newY)
+        if self.y < BORDER + self.HEIGHT//2:
+            self.y = BORDER + self.HEIGHT//2
+        if self.y > HEIGHT - BORDER - self.HEIGHT//2:
+            self.y = HEIGHT - BORDER - self.HEIGHT//2
         self.show(self.color)
 
 
@@ -96,9 +96,22 @@ paddle = Paddle(HEIGHT//2)
 # Frame rate
 clock = pygame.time.Clock()
 
-sample = open("game.csv", "w")
+#sample = open("game.csv", "w")
 
-print("x,y,vx,vy,Paddle.y", file=sample)
+#print("x,y,vx,vy,Paddle.y", file=sample)
+
+pong = pd.read_csv("game.csv")
+pong = pong.drop_duplicates()
+
+X = pong.drop(columns="Paddle.y")
+y = pong['Paddle.y']
+
+from sklearn.neighbors import KNeighborsRegressor
+
+clf = KNeighborsRegressor(n_neighbors=3)
+clf = clf.fit(X, y)
+
+df = pd.DataFrame(columns=['x', 'y', 'vx', 'vy'])
 
 # === Game loop
 while True:
@@ -107,12 +120,19 @@ while True:
     else:
         clock.tick(FRAMERATE)
 
-    ball.update()
-    paddle.update()
     # Display everything
     pygame.display.flip()
 
-    print(f"{ball.x},{ball.y},{ball.vx},{ball.vx},{paddle.y}", file=sample)
+    toPredict = df.append({'x': ball.x, 'y': ball.y, 'vx': ball.vx, 'vy': ball.vy}, ignore_index=True)
+    # print(toPredict)
+    shouldMove = clf.predict(toPredict)
+    print(int(shouldMove))
+
+    paddle.update(shouldMove)
+
+    ball.update()
+
+    #print(f"{ball.x},{ball.y},{ball.vx},{ball.vx},{paddle.y}", file=sample)
 
     # === Event queue
     e = pygame.event.poll()
